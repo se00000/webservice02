@@ -32,6 +32,7 @@ node server.js
 ├── server.js      # Express API 서버 (수정본)
 ├── index.html     # 게시판 화면과 요청·SQL·JSON 검사기 (수정본)
 ├── package.json
+├── docs/evidence/ # 테스트 캡처 (T01~T29)
 ├── original/      # 제공된 원본 예제 (비교용, 수정하지 않음)
 │   ├── server.js
 │   ├── index.html
@@ -65,13 +66,49 @@ git diff --no-index original/index.html index.html
 
 ## 테스트 결과 요약
 
-평가 항목별 29개 테스트를 브라우저에서 실행했고, 모두 기대 결과와 일치했습니다. 입력, 기대·실제 결과, 캡처는 보고서에 있습니다.
+평가 항목별 29개 테스트를 브라우저에서 실행했고, 모두 기대 결과와 일치했습니다. 입력, 기대·실제 결과는 보고서에 있고, 캡처는 아래 [테스트 캡처](#테스트-캡처)에서 볼 수 있습니다.
 
 - 검색·정렬: 제목·본문 검색, 결과 없음, 세 가지 정렬, 조회수 동점 시 id DESC, `views;DROP TABLE--`·`__proto__`·`constructor` → latest
 - 페이지네이션: `page=0, -1, abc` → 1페이지, `limit=1000` → 100, 검색·정렬 변경 시 1페이지, 커서 검색 Redis 끝까지 넘겨 83건·중복 0건(오프셋 totalCount 83과 일치), 마지막에 더 보기 비활성화
 - 비동기 처리: 5글자 연속 입력 시 요청 1회, 3G 쓰로틀링에서 검색어를 바꾸면 이전 요청 취소와 AbortController 로그, 최종 결과만 표시
 - URL 상태 복원: 검색어·정렬·페이지가 주소에 반영되고, 새로고침·뒤로 가기 후 주소·입력창·정렬·결과 일치
 - 응답 시간 관찰값: `executionTimeMs` 약 0.1~2ms, `X-Response-Time` 0.94ms (1,000건 인메모리 배열)
+
+## 테스트 캡처
+
+사진을 누르면 원본 크기로 볼 수 있습니다. 번호는 보고서의 테스트 표 번호와 같습니다. 모든 캡처를 한 페이지에서 보려면 [docs/evidence](docs/evidence/README.md)를 여세요.
+
+| 번호 | 항목 | 테스트 입력 | 캡처 |
+|---|---|---|---|
+| 1 | 제목 검색 | 검색창 `Redis` | [보기](docs/evidence/T01.png) |
+| 2 | 본문 검색 | 검색창 `상세` | [보기](docs/evidence/T02.png) |
+| 3 | 결과 없음 | 검색창 `abcdefg` | [보기](docs/evidence/T03.png) |
+| 4 | 최신순 | 정렬 최신순 | [보기](docs/evidence/T04.png) |
+| 5 | 오래된순 | 정렬 오래된순 | [보기](docs/evidence/T05.png) |
+| 6 | 조회순 | 정렬 조회순 | [보기](docs/evidence/T06.png) |
+| 7 | 동점 id DESC | 조회순 정렬 후 조회수가 같은 글 확인 (4,962: #758 → #235) | [보기](docs/evidence/T07.png) |
+| 8 | 화이트리스트 | `/api/posts?sort=views;DROP%20TABLE--&limit=3` | [보기](docs/evidence/T08.png) |
+| 9 | 상속 속성 차단 | `/api/posts?sort=__proto__&limit=5` | [보기](docs/evidence/T09.png) |
+| 10 | 상속 속성 차단 | `/api/posts?sort=constructor&limit=5` | [보기](docs/evidence/T10.png) |
+| 11 | 오프셋 페이지 이동, meta 응답 | 3페이지 클릭 | [보기](docs/evidence/T11.png) |
+| 12 | page 방어 | `/api/posts?page=0&limit=5` | [보기](docs/evidence/T12.png) |
+| 13 | page 방어 | `/api/posts?page=-1&limit=5` | [보기](docs/evidence/T13.png) |
+| 14 | page 방어 | `/api/posts?page=abc&limit=5` | [보기](docs/evidence/T14.png) |
+| 15 | limit 제한 | `/api/posts?limit=1000` | [보기](docs/evidence/T15.png) |
+| 16 | 검색 변경 시 1페이지 | 3페이지에서 `Redis` 입력 | [변경 전 보기](docs/evidence/T16-1.png) · [변경 후 보기](docs/evidence/T16-2.png) |
+| 17 | 정렬 변경 시 1페이지 | 4페이지에서 조회수순으로 변경 | [변경 전 보기](docs/evidence/T17-1.png) · [변경 후 보기](docs/evidence/T17-2.png) |
+| 18 | 커서 검색 (JSON) | `/api/posts/cursor?search=Redis&limit=5` | [보기](docs/evidence/T18.png) |
+| 19 | 검색 + 커서 조건 (JSON) | `/api/posts/cursor?search=Redis&limit=5&cursor=967` | [보기](docs/evidence/T19.png) |
+| 20 | 커서 정렬 고정 | 커서 탭 클릭 | [보기](docs/evidence/T20.png) |
+| 21 | 커서 검색 (화면) | 커서 모드에서 `Redis` 검색 | [보기](docs/evidence/T21.png) |
+| 22 | 검색 변경 시 누적 목록·커서 초기화 | 더 보기 후 `B-Tree` 검색 | [변경 전 보기](docs/evidence/T22-1.png) · [변경 후 보기](docs/evidence/T22-2.png) |
+| 23 | 누락·중복 확인, 더 보기 비활성화 | `Redis` 끝까지 더 보기, 콘솔에서 개수 확인 | [보기](docs/evidence/T23.png) |
+| 24 | 300ms 디바운스 | `Redis`를 300ms 미만 간격으로 입력 | [보기](docs/evidence/T24.png) |
+| 25 | 요청 취소, AbortError, 느린 네트워크 | 3G에서 `Redis` → 지움 → `B-Tree` | [보기](docs/evidence/T25.png) |
+| 26 | URL 동기화 | `Redis` + 조회수순 + 3페이지 | [보기](docs/evidence/T26.png) |
+| 27 | 새로고침 | F5 | [보기](docs/evidence/T27.png) |
+| 28 | 뒤로 가기 | 2페이지 이동 후 뒤로 가기 | [2페이지 이동 보기](docs/evidence/T28-1.png) · [뒤로 가기 후 3페이지 보기](docs/evidence/T28-2.png) |
+| 29 | 잘못된 sort URL | `?sort=abc` | [보기](docs/evidence/T29.png) |
 
 ## 개념 정리
 
